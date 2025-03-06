@@ -1,0 +1,84 @@
+Dim FirstSelection As Range
+Dim RelationshipSelection As Range
+Dim SecondSelection As Range
+Dim StepCounter As Integer
+
+Sub HighlightAndAppendTable()
+    ' Initialize step counter if needed
+    If StepCounter = 0 Then StepCounter = 1
+    
+    Select Case StepCounter
+        Case 1 ' First selection (Entity 1)
+            If Selection.Type = wdSelectionNormal Then
+                Set FirstSelection = Selection.Range
+                FirstSelection.HighlightColorIndex = wdYellow
+                MsgBox "First selection saved! Now highlight the relationship text and press the shortcut again.", vbInformation
+                StepCounter = 2
+            Else
+                MsgBox "Please select some text first!", vbExclamation
+            End If
+        
+        Case 2 ' Relationship selection
+            If Selection.Type = wdSelectionNormal Then
+                Set RelationshipSelection = Selection.Range
+                RelationshipSelection.HighlightColorIndex = wdGreen
+                MsgBox "Relationship saved! Now highlight the second entity and press the shortcut again.", vbInformation
+                StepCounter = 3
+            Else
+                MsgBox "Please select some text first!", vbExclamation
+            End If
+
+        Case 3 ' Second selection (Entity 2) and Append to Table
+            If Selection.Type = wdSelectionNormal Then
+                Set SecondSelection = Selection.Range
+                SecondSelection.HighlightColorIndex = wdYellow
+                
+                Dim doc As Document
+                Dim tableLoc As Range
+                Dim tbl As Table
+                Dim rowCount As Integer
+                Dim tableExists As Boolean
+                Dim FileName As String
+                tableExists = False
+                
+                ' Get the current file name as a citation
+                FileName = ActiveDocument.Name
+                If InStr(FileName, ".") > 0 Then FileName = Left(FileName, InStrRev(FileName, ".") - 1) ' Remove extension
+                
+                ' Check if a table already exists at the end of the document
+                Set doc = ActiveDocument
+                If doc.Tables.Count > 0 Then
+                    Set tbl = doc.Tables(doc.Tables.Count)
+                    ' Check if this is the correct structure
+                    If tbl.Rows(1).Cells.Count = 4 And tbl.Cell(1, 1).Range.Text Like "Entity 1*" Then
+                        tableExists = True
+                    End If
+                End If
+                
+                ' Create a new table if one does not exist
+                If Not tableExists Then
+                    Set tableLoc = doc.Range
+                    tableLoc.Collapse wdCollapseEnd
+                    Set tbl = doc.Tables.Add(tableLoc, 2, 4)
+                    tbl.Cell(1, 1).Range.Text = "Entity 1"
+                    tbl.Cell(1, 2).Range.Text = "Relationship"
+                    tbl.Cell(1, 3).Range.Text = "Entity 2"
+                    tbl.Cell(1, 4).Range.Text = "Citation"
+                End If
+                
+                ' Append new data
+                rowCount = tbl.Rows.Count
+                tbl.Rows.Add
+                tbl.Cell(rowCount + 1, 1).Range.Text = FirstSelection.Text
+                tbl.Cell(rowCount + 1, 2).Range.Text = RelationshipSelection.Text
+                tbl.Cell(rowCount + 1, 3).Range.Text = SecondSelection.Text
+                tbl.Cell(rowCount + 1, 4).Range.Text = FileName
+                
+                MsgBox "Relationship added to table with citation!", vbInformation
+                StepCounter = 0 ' Reset counter
+            Else
+                MsgBox "Please select some text first!", vbExclamation
+                StepCounter = 0 ' Reset counter
+            End If
+    End Select
+End Sub
